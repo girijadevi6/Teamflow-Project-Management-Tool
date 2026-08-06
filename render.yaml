@@ -1,0 +1,56 @@
+databases:
+  - name: teamflow-db
+    plan: free
+    databaseName: teamflow
+    user: teamflow
+
+services:
+  # ── Backend: FastAPI, built from backend/Dockerfile ────────────────────────
+  - type: web
+    name: teamflow-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "1440"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: teamflow-db
+          property: connectionString
+      - key: FRONTEND_URL
+        value: https://teamflow-frontend.onrender.com
+      - key: CORS_ORIGINS
+        value: https://teamflow-frontend.onrender.com
+
+  # ── Frontend: React + Vite, built as a static site ──────────────────────────
+  - type: web
+    name: teamflow-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://teamflow-backend.onrender.com
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+# ── After the first deploy ────────────────────────────────────────────────────
+# 1. Render assigns real *.onrender.com URLs to each service (the ones above
+#    are placeholders using the default naming scheme). If yours differ,
+#    update FRONTEND_URL / CORS_ORIGINS on the backend and VITE_API_URL on
+#    the frontend in the Render dashboard, then trigger a redeploy of the
+#    frontend so the new API URL is baked into the build.
+# 2. teamflow-db is a free Render Postgres instance (expires after 90 days
+#    on the free plan — see README for details/upgrade path).
+# 3. Demo accounts (password123 for all) are seeded automatically on backend
+#    startup by backend/seed_data.py.
