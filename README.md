@@ -571,7 +571,7 @@ The backend exposes dashboard endpoints for statistics and activity so the front
 
 ## 11. AI Project Assistant
 
-TeamFlow also includes an AI Project Assistant powered by **Groq api**.
+TeamFlow also includes an AI Project Assistant powered by **Groq Api**.
 
 The assistant is designed for two types of questions:
 
@@ -783,7 +783,7 @@ These are intentionally documented rather than hidden because the project is des
 
 ```bash
 git clone https://github.com/girijadevi6/Teamflow-Project-Management-Tool.git
-cd teamflow
+cd Teamflow-Project-Management-Tool
 ```
 
 ### Backend setup
@@ -1012,19 +1012,19 @@ Update this section after the final deployment.
 
 ```text
 Frontend:
-https://teamflow-frontend-kjdl.onrender.com
+[TeamFlow Application](https://teamflow-frontend-kjdl.onrender.com)
 
 Backend:
-https://teamflow-backend-41oe.onrender.com
+[TeamFlow API](https://teamflow-backend-41oe.onrender.com)
 
 Swagger:
-https://teamflow-backend-41oe.onrender.com/docs
+[Swagger UI](https://teamflow-backend-41oe.onrender.com/docs)
 
 ReDoc:
-https://teamflow-backend-41oe.onrender.com/redoc
+[ReDoc](https://teamflow-backend-41oe.onrender.com/redoc)
 
 OpenAPI:
-https://teamflow-backend-41oe.onrender.com/openapi.json
+[OpenAPI Specification](https://teamflow-backend-41oe.onrender.com/openapi.json)
 ```
 
 ---
