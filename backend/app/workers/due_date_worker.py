@@ -12,7 +12,7 @@ a background task started with the FastAPI lifespan).
 
 import asyncio
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from sqlalchemy.orm import Session, joinedload
 
@@ -230,6 +230,82 @@ def check_overdue_tasks(db: Session) -> int:
     return count
 
 
+def check_daily_digest(db: Session) -> int:
+    """
+    Generate a daily digest notification for each user who has assigned tasks.
+    Summarises: tasks assigned, tasks due today, overdue tasks.
+    Deduplicated by checking for existing DAILY_DIGEST notifications created today.
+    """
+    from ..models.user import User
+
+    today = date.today()
+    count = 0
+
+    # Get all users with at least one assigned task
+    users_with_tasks = (
+        db.query(User)
+        .filter(User.id.in_(
+            db.query(Task.assigned_to).filter(
+                Task.assigned_to.isnot(None),
+                Task.status != TaskStatus.DONE,
+            ).distinct()
+        ))
+        .all()
+    )
+
+    for user in users_with_tasks:
+        # Check if we already sent a digest today
+        already = (
+            db.query(Notification)
+            .filter(
+                Notification.user_id == user.id,
+                Notification.type == NotificationType.DAILY_DIGEST,
+                Notification.created_at >= datetime.combine(today, datetime.min.time()),
+            )
+            .first()
+        )
+        if already:
+            continue
+
+        # Gather stats for this user
+        user_tasks = (
+            db.query(Task)
+            .filter(
+                Task.assigned_to == user.id,
+                Task.status != TaskStatus.DONE,
+            )
+            .all()
+        )
+
+        total_assigned = len(user_tasks)
+        due_today = sum(1 for t in user_tasks if t.due_date == today)
+        overdue = sum(1 for t in user_tasks if t.due_date and t.due_date < today)
+        in_progress = sum(1 for t in user_tasks if t.status == TaskStatus.IN_PROGRESS)
+
+        parts = [f"You have {total_assigned} active task(s)."]
+        if due_today > 0:
+            parts.append(f"{due_today} task(s) due today!")
+        if overdue > 0:
+            parts.append(f"⚠ {overdue} task(s) are overdue.")
+        if in_progress > 0:
+            parts.append(f"{in_progress} task(s) in progress.")
+
+        notif = Notification(
+            user_id=user.id,
+            type=NotificationType.DAILY_DIGEST,
+            title="📊 Daily Task Summary",
+            message=" ".join(parts),
+        )
+        db.add(notif)
+        count += 1
+
+    if count:
+        db.commit()
+        logger.info("Daily digest: created %d notifications", count)
+
+    return count
+
+
 async def run_due_date_worker():
     """Async loop that runs the checks every hour."""
     logger.info("Due-date notification worker started.")
@@ -241,13 +317,15 @@ async def run_due_date_worker():
                 due_soon = check_due_soon(db)
                 project_deadlines = check_project_deadlines(db)
                 overdue = check_overdue_tasks(db)
-                total = due_soon + project_deadlines + overdue
+                digest = check_daily_digest(db)
+                total = due_soon + project_deadlines + overdue + digest
                 logger.info(
-                    "Due-date check complete. Notifications created: %d (due_soon: %d, project_deadlines: %d, overdue: %d)",
+                    "Worker check complete. Notifications: %d (due_soon: %d, deadlines: %d, overdue: %d, digest: %d)",
                     total,
                     due_soon,
                     project_deadlines,
                     overdue,
+                    digest,
                 )
             finally:
                 db.close()
@@ -256,3 +334,4 @@ async def run_due_date_worker():
 
         # Sleep 1 hour before next run
         await asyncio.sleep(3600)
+

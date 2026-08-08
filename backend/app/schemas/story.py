@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, date
 from ..models.story import StoryStatus, Priority
 from .user import UserPublic
 
@@ -25,7 +25,7 @@ class TaskInStory(BaseModel):
     status: str
     priority: str
     assignee: Optional[UserPublic] = None
-    due_date: Optional[str] = None
+    due_date: Optional[date] = None
     story_points: int = 1
 
     model_config = {"from_attributes": True}

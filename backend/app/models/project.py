@@ -17,6 +17,7 @@ class ProjectStatus(str, enum.Enum):
     PLANNING = "PLANNING"
     ACTIVE = "ACTIVE"
     PENDING = "PENDING"
+    PENDING_REVIEW = "PENDING_REVIEW"
     ON_HOLD = "ON_HOLD"
     COMPLETED = "COMPLETED"
     ARCHIVED = "ARCHIVED"

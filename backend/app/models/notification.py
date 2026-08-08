@@ -1,9 +1,13 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, Enum as SAEnum
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
 import enum
 
 from ..database import Base
+
+
+def _utcnow():
+    return datetime.now(timezone.utc)
 
 
 class NotificationType(str, enum.Enum):
@@ -18,6 +22,16 @@ class NotificationType(str, enum.Enum):
     COMMENT_ADDED = "COMMENT_ADDED"
     TASK_COMMENTED = "TASK_COMMENTED"
     TASK_UNASSIGNED = "TASK_UNASSIGNED"
+    TASK_SUBMITTED_FOR_REVIEW = "TASK_SUBMITTED_FOR_REVIEW"
+    TASK_CHANGES_REQUESTED = "TASK_CHANGES_REQUESTED"
+    TASK_APPROVED = "TASK_APPROVED"
+    PROJECT_SUBMITTED_FOR_REVIEW = "PROJECT_SUBMITTED_FOR_REVIEW"
+    PROJECT_CHANGES_REQUESTED = "PROJECT_CHANGES_REQUESTED"
+    PROJECT_COMPLETED = "PROJECT_COMPLETED"
+    DAILY_DIGEST = "DAILY_DIGEST"
+    URGENT_TASK_ASSIGNED = "URGENT_TASK_ASSIGNED"
+    TASK_URGENT_DUE = "TASK_URGENT_DUE"
+    URGENT_TASK_DUE_SOON = "URGENT_TASK_DUE_SOON"
 
 
 class Notification(Base):
@@ -32,7 +46,7 @@ class Notification(Base):
     related_project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)
     related_task_id = Column(Integer, ForeignKey("tasks.id"), nullable=True)
     related_story_id = Column(Integer, ForeignKey("user_stories.id"), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow)
 
     # Relationships
     user = relationship("User", back_populates="notifications")

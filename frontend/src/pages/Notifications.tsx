@@ -18,16 +18,29 @@ const TYPE_META: Record<NotificationType, { icon: string; color: string }> = {
   COMMENT_ADDED:                { icon: '💬', color: 'bg-slate-50 border-slate-100' },
   TASK_COMMENTED:               { icon: '💬', color: 'bg-slate-50 border-slate-100' },
   TASK_UNASSIGNED:              { icon: '👤', color: 'bg-orange-50 border-orange-100' },
+  TASK_SUBMITTED_FOR_REVIEW:    { icon: '📝', color: 'bg-purple-50 border-purple-100' },
+  TASK_CHANGES_REQUESTED:       { icon: '🔙', color: 'bg-orange-50 border-orange-100' },
+  TASK_APPROVED:                { icon: '✅', color: 'bg-green-50 border-green-100' },
+  PROJECT_SUBMITTED_FOR_REVIEW: { icon: '📥', color: 'bg-purple-50 border-purple-100' },
+  PROJECT_CHANGES_REQUESTED:    { icon: '📢', color: 'bg-orange-50 border-orange-100' },
+  PROJECT_COMPLETED:            { icon: '🎉', color: 'bg-green-50 border-green-100' },
+  DAILY_DIGEST:                 { icon: '📊', color: 'bg-blue-50 border-blue-100' },
+  URGENT_TASK_ASSIGNED:         { icon: '🚨', color: 'bg-red-50 border-red-200' },
+  TASK_URGENT_DUE:              { icon: '🚨', color: 'bg-red-50 border-red-200' },
+  URGENT_TASK_DUE_SOON:         { icon: '🚨', color: 'bg-red-50 border-red-200' },
 }
 
 const FILTER_TYPES: { value: string; label: string }[] = [
-  { value: '',                   label: 'All Types' },
-  { value: 'TASK_ASSIGNED',      label: 'Task Assigned' },
-  { value: 'TASK_STATUS_CHANGED',label: 'Status Changed' },
-  { value: 'TASK_DUE_SOON',      label: 'Due Soon' },
-  { value: 'STORY_COMPLETED',    label: 'Story Completed' },
-  { value: 'PROJECT_ADDED',      label: 'Project Added' },
-  { value: 'TASK_UNASSIGNED',    label: 'Unassigned' },
+  { value: '',                           label: 'All Types' },
+  { value: 'URGENT_TASK_ASSIGNED',       label: '🚨 Urgent Task' },
+  { value: 'TASK_ASSIGNED',              label: 'Task Assigned' },
+  { value: 'TASK_SUBMITTED_FOR_REVIEW',  label: 'Task Review' },
+  { value: 'TASK_CHANGES_REQUESTED',     label: 'Task Redo' },
+  { value: 'PROJECT_SUBMITTED_FOR_REVIEW',label: 'Project Review' },
+  { value: 'PROJECT_CHANGES_REQUESTED',   label: 'Project Redo' },
+  { value: 'PROJECT_COMPLETED',          label: 'Project Completed' },
+  { value: 'TASK_STATUS_CHANGED',        label: 'Status Changed' },
+  { value: 'PROJECT_ADDED',              label: 'Project Added' },
 ]
 
 export default function Notifications() {

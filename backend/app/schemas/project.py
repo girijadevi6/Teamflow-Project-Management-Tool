@@ -20,6 +20,7 @@ class ProjectUpdate(BaseModel):
     status: Optional[ProjectStatus] = None
     priority: Optional[ProjectPriority] = None
     deadline: Optional[date] = None
+    comment: Optional[str] = None  # For review feedback (e.g., changes requested)
 
 
 class ProjectMemberResponse(BaseModel):

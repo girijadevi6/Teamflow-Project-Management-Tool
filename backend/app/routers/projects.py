@@ -13,7 +13,11 @@ from ..schemas.project import (
     AddMemberRequest, UpdateMemberRoleRequest, ProjectMemberResponse,
 )
 from ..schemas.hierarchy import ProjectHierarchy, StoryHierarchy, TaskHierarchy
-from ..services.notification_service import notify_added_to_project, create_notification
+from ..services.notification_service import (
+    notify_added_to_project, create_notification,
+    notify_project_submitted_for_review, notify_project_changes_requested,
+    notify_project_completed,
+)
 from ..services.activity_service import log_activity
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
@@ -128,6 +132,8 @@ def list_projects(
                 name=p.name,
                 description=p.description,
                 status=p.status,
+                priority=p.priority,
+                deadline=p.deadline,
                 created_at=p.created_at,
                 total_stories=stats["total_stories"],
                 total_tasks=stats["total_tasks"],
@@ -308,32 +314,42 @@ def update_member_role(
     return membership
 
 
-# ── Project status update (team leader and manager) ───────────────────────
+# ── Project status update (review workflow) ───────────────────────────────
 
 @router.patch("/{project_id}/status", response_model=ProjectResponse)
 def update_project_status(
     project_id: int,
-    payload: ProjectUpdate,  # We only expect status, but we can reuse ProjectUpdate
+    payload: ProjectUpdate,  # We only expect status + optional comment
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    project = db.query(Project).filter(Project.id == project_id).first()
+    project = (
+        db.query(Project)
+        .options(joinedload(Project.members).joinedload(ProjectMember.user), joinedload(Project.stories))
+        .filter(Project.id == project_id)
+        .first()
+    )
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # Check if user is allowed to update this project's status
-    # Managers can update any project they created
-    # Team leaders can update projects they lead
-    is_manager = current_user.role == UserRole.MANAGER and project.created_by == current_user.id
-    is_leader = False
-    if current_user.role == UserRole.TEAM_LEADER:
+    # Determine user's role in this project
+    is_manager = current_user.role == UserRole.MANAGER
+    is_leader = current_user.role == UserRole.TEAM_LEADER
+    if not is_leader:
         membership = db.query(ProjectMember).filter(
             ProjectMember.project_id == project_id,
             ProjectMember.user_id == current_user.id,
             ProjectMember.role == MemberRole.TEAM_LEADER,
         ).first()
         is_leader = membership is not None
+
+    # Members cannot update project status
+    if current_user.role == UserRole.MEMBER and not is_leader:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Team members cannot change project status.",
+        )
 
     if not (is_manager or is_leader):
         raise HTTPException(
@@ -342,38 +358,93 @@ def update_project_status(
         )
 
     old_status = project.status
-    if payload.status is not None:
-        project.status = payload.status
-    # Note: We are only updating status via this endpoint, but if other fields are provided, we ignore them.
-    # Alternatively, we could update other fields if needed, but the requirement is for status only.
-    # We'll only update status.
+    new_status = payload.status
 
+    if new_status is None or new_status == old_status:
+        raise HTTPException(status_code=400, detail="No status change specified")
+
+    # ── Role-based transition rules ────────────────────────────────────────
+    from ..models.project import ProjectStatus as PS
+
+    if is_leader and not is_manager:
+        # Leaders can: PLANNING → ACTIVE or PENDING_REVIEW
+        #              ACTIVE → PENDING_REVIEW (submit for review)
+        #              PENDING_REVIEW → ACTIVE (withdraw review)
+        allowed = {
+            PS.PLANNING: [PS.ACTIVE, PS.PENDING_REVIEW],
+            PS.ACTIVE: [PS.PENDING_REVIEW],
+            PS.PENDING_REVIEW: [PS.ACTIVE],  # withdraw
+        }
+        if new_status not in allowed.get(old_status, []):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Team leaders cannot move project from {old_status.value} to {new_status.value}.",
+            )
+
+    # Check completion of user stories and tasks before submitting to manager for review
+    if new_status == PS.PENDING_REVIEW and old_status != PS.PENDING_REVIEW:
+        from ..models.story import StoryStatus
+        from ..models.task import TaskStatus
+
+        if not project.stories:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Task incomplete: Cannot submit project for review. The project has no user stories. All user stories and tasks must be created and completed first."
+            )
+
+        incomplete_stories = [s for s in project.stories if s.status != StoryStatus.DONE]
+        incomplete_tasks = [
+            t for s in project.stories for t in s.tasks if t.status != TaskStatus.DONE
+        ]
+
+        if incomplete_stories or incomplete_tasks:
+            parts = []
+            if incomplete_stories:
+                parts.append(f"{len(incomplete_stories)} incomplete user story(ies)")
+            if incomplete_tasks:
+                parts.append(f"{len(incomplete_tasks)} incomplete task(s)")
+
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Task incomplete: Cannot submit project to manager for review. All user stories and tasks must be completed before submitting ({', '.join(parts)} remaining)."
+            )
+
+    # Apply status change
+    project.status = new_status
     db.commit()
     db.refresh(project)
 
-    # Notify project members about status change
-    if old_status != project.status:
-        # Notify all project members (except the user who made the change if they are a member)
+    # ── Workflow-specific notifications ─────────────────────────────────────
+    if new_status == PS.PENDING_REVIEW and old_status != PS.PENDING_REVIEW:
+        # Leader submitted for review → notify manager
+        notify_project_submitted_for_review(db, project, current_user)
+
+
+    elif new_status == PS.COMPLETED and old_status == PS.PENDING_REVIEW and is_manager:
+        # Manager approved → notify all members
+        notify_project_completed(db, project, current_user)
+
+    elif old_status == PS.PENDING_REVIEW and new_status == PS.ACTIVE and is_manager:
+        # Manager requested changes → notify leaders
+        notify_project_changes_requested(
+            db, project, current_user, payload.comment or ""
+        )
+
+    else:
+        # General status change notification
         for membership in project.members:
             if membership.user_id != current_user.id:
                 create_notification(
                     db=db,
                     user_id=membership.user_id,
-                    notif_type=NotificationType.PROJECT_STATUS_CHANGED,  # We need to add this type
+                    notif_type=NotificationType.PROJECT_STATUS_CHANGED,
                     title="Project Status Updated",
-                    message=f'Project "{project.name}" status changed from {old_status} to {project.status}.',
+                    message=(
+                        f'{current_user.name} changed project "{project.name}" '
+                        f'status from {old_status.value} to {project.status.value}.'
+                    ),
                     related_project_id=project.id,
                 )
-        # Also notify the manager if the changer is not the manager
-        if project.created_by != current_user.id:
-            create_notification(
-                db=db,
-                user_id=project.created_by,
-                notif_type=NotificationType.PROJECT_STATUS_CHANGED,
-                title="Project Status Updated",
-                message=f'Project "{project.name}" status changed from {old_status} to {project.status} by {current_user.name}.',
-                related_project_id=project.id,
-            )
 
     background_tasks.add_task(
         log_activity, db, current_user.id, "updated_project_status", "project",

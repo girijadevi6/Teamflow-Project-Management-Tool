@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     # Kept for backwards compatibility with existing .env files.
     FRONTEND_URL: str = "http://localhost:5173"
 
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+
     # Comma-separated list of additional allowed origins, e.g.
     # "https://teamflow.onrender.com,https://teamflow-frontend.onrender.com"
     CORS_ORIGINS: str = ""

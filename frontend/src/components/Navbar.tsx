@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Bell, LayoutDashboard, FolderKanban, LogOut, User, ChevronDown, CheckSquare } from 'lucide-react'
+import { Bell, LayoutDashboard, FolderKanban, LogOut, User, ChevronDown, CheckSquare, BarChart3 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { notificationsApi } from '../api'
 import Avatar from './Avatar'
@@ -74,6 +74,9 @@ export default function Navbar() {
     TASK_ASSIGNED: '📋', TASK_STATUS_CHANGED: '🔄', TASK_DUE_SOON: '⏰', TASK_OVERDUE: '⚠️',
     STORY_COMPLETED: '✅', PROJECT_ADDED: '🏗️', PROJECT_STATUS_CHANGED: '📢',
     PROJECT_DEADLINE_APPROACHING: '🚨', COMMENT_ADDED: '💬', TASK_UNASSIGNED: '👤',
+    TASK_SUBMITTED_FOR_REVIEW: '📝', TASK_CHANGES_REQUESTED: '🔙', TASK_APPROVED: '✅',
+    PROJECT_SUBMITTED_FOR_REVIEW: '📥', PROJECT_CHANGES_REQUESTED: '📢', PROJECT_COMPLETED: '🎉',
+    DAILY_DIGEST: '📊', URGENT_TASK_ASSIGNED: '🚨', TASK_URGENT_DUE: '🚨', URGENT_TASK_DUE_SOON: '🚨',
   }
 
   return (
@@ -89,6 +92,7 @@ export default function Navbar() {
         {navLink('/dashboard', 'Dashboard', LayoutDashboard)}
         {navLink('/projects', 'Projects', FolderKanban)}
         {navLink('/my-tasks', 'My Tasks', CheckSquare)}
+        {(user?.role === 'MANAGER' || user?.role === 'TEAM_LEADER') && navLink('/reports', 'Reports', BarChart3)}
       </div>
 
       {/* Right section */}

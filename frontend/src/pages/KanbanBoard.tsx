@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
-import { ArrowLeft, Plus, X, Filter, Trash2, Pencil } from 'lucide-react'
+import { ArrowLeft, Plus, X, Filter, Trash2, Pencil, RotateCcw, Check, MessageSquare } from 'lucide-react'
 import { projectsApi, storiesApi, tasksApi, authApi } from '../api'
 import { useAuth } from '../context/AuthContext'
 import Layout from '../components/Layout'
@@ -9,6 +9,7 @@ import Spinner from '../components/Spinner'
 import Modal from '../components/Modal'
 import Avatar from '../components/Avatar'
 import Badge from '../components/Badge'
+import TaskDiscussionDrawer from '../components/TaskDiscussionDrawer'
 import type { KanbanBoard as KanbanBoardType, Task, Story, Project, User } from '../types'
 import { priorityColors, priorityDot, formatDate, isOverdue, TASK_STATUS_LABELS } from '../utils'
 
@@ -25,10 +26,12 @@ const TASK_STATUSES = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE']
 // ── Draggable task card ────────────────────────────────────────────────────────
 
 function KanbanCard({
-  task, index, canEdit, onEdit, onDelete,
+  task, index, canEdit, onEdit, onDelete, onRequestChanges, onApprove, onOpenComments,
 }: {
   task: Task; index: number; canEdit: boolean
   onEdit: (t: Task) => void; onDelete: (t: Task) => void
+  onRequestChanges?: (t: Task) => void; onApprove?: (t: Task) => void
+  onOpenComments?: (t: Task) => void
 }) {
   const overdue = isOverdue(task.due_date, task.status)
   return (
@@ -51,17 +54,24 @@ function KanbanCard({
               {task.title}
             </p>
             {canEdit && (
-              <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                <button onClick={() => onEdit(task)}
-                  className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600">
-                  <Pencil size={11} />
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
+                <button
+                  onClick={() => onEdit(task)}
+                  title="Edit Task"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                >
+                  <Pencil size={12} />
                 </button>
-                <button onClick={() => onDelete(task)}
-                  className="p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-500">
-                  <Trash2 size={11} />
+                <button
+                  onClick={() => onDelete(task)}
+                  title="Delete Task"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                >
+                  <Trash2 size={12} />
                 </button>
               </div>
             )}
+
           </div>
 
           {/* story context */}
@@ -78,18 +88,49 @@ function KanbanCard({
           </div>
 
           {/* footer */}
-          <div className="flex items-center justify-between mt-3 ml-4">
-            {task.due_date ? (
-              <span className={`text-xs ${overdue ? 'text-red-500 font-medium' : 'text-slate-400'}`}>
-                📅 {formatDate(task.due_date)}{overdue ? ' ⚠' : ''}
-              </span>
-            ) : <span />}
+          <div className="flex items-center justify-between mt-3 ml-4 gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {task.due_date ? (
+                <span className={`text-xs ${overdue ? 'text-red-500 font-medium' : 'text-slate-400'}`}>
+                  📅 {formatDate(task.due_date)}{overdue ? ' ⚠' : ''}
+                </span>
+              ) : null}
+              {onOpenComments && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onOpenComments(task) }}
+                  className="flex items-center gap-1 text-[11px] font-medium text-slate-500 hover:text-brand-600 hover:bg-brand-50 px-1.5 py-0.5 rounded transition-colors"
+                  title="Open task discussion"
+                >
+                  <MessageSquare size={11} />
+                  <span>Comments</span>
+                </button>
+              )}
+            </div>
             {task.assignee ? (
               <Avatar name={task.assignee.name} color={task.assignee.avatar_color} size="xs" />
             ) : (
               <div className="w-6 h-6 rounded-full border-2 border-dashed border-slate-300" title="Unassigned" />
             )}
           </div>
+
+          {/* Quick review actions for Leaders/Managers when task is IN_REVIEW */}
+          {canEdit && task.status === 'IN_REVIEW' && (
+            <div className="mt-2.5 pt-2 border-t border-purple-100 flex items-center justify-between gap-1.5" onClick={e => e.stopPropagation()}>
+              <button
+                onClick={() => onRequestChanges && onRequestChanges(task)}
+                className="flex-1 py-1 px-2 bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-colors"
+              >
+                <RotateCcw size={11} /> Request Changes
+              </button>
+              <button
+                onClick={() => onApprove && onApprove(task)}
+                className="py-1 px-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-colors"
+              >
+                <Check size={11} /> Approve
+              </button>
+            </div>
+          )}
         </div>
       )}
     </Draggable>
@@ -117,6 +158,7 @@ export default function KanbanBoard() {
   const [editTask, setEditTask]   = useState<Task | null>(null)
   const [deleteTask, setDeleteTask] = useState<Task | null>(null)
   const [showAddTask, setShowAddTask] = useState(false)
+  const [activeDrawerTask, setActiveDrawerTask] = useState<Task | null>(null)
   const [taskForm, setTaskForm] = useState({
     story_id: 0, title: '', description: '', priority: 'MEDIUM',
     status: 'TODO', assigned_to: null as number | null,
@@ -143,7 +185,17 @@ export default function KanbanBoard() {
     } finally { setLoading(false) }
   }
 
-  // ── Drag & drop ──────────────────────────────────────────────────────────────
+  // Reject comment state for Kanban drag
+  const [kanbanReject, setKanbanReject] = useState<{ taskId: number } | null>(null)
+  const [kanbanRejectComment, setKanbanRejectComment] = useState('')
+
+  // Allowed transitions for members
+  const memberAllowed: Record<string, string[]> = {
+    'TODO': ['IN_PROGRESS'],
+    'IN_PROGRESS': ['TODO', 'IN_REVIEW'],
+    'IN_REVIEW': ['IN_PROGRESS'],
+    'DONE': [],
+  }
 
   const onDragEnd = async (result: DropResult) => {
     const { source, destination, draggableId } = result
@@ -154,6 +206,39 @@ export default function KanbanBoard() {
     const dstCol  = destination.droppableId as keyof KanbanBoardType
     const taskId  = Number(draggableId)
 
+    // Members can only move their own tasks
+    const movedTask = board[srcCol][source.index]
+    if (user?.role === 'MEMBER' && movedTask.assigned_to !== user.id) {
+      loadAll(); return
+    }
+
+    // Enforce member transition rules
+    if (user?.role === 'MEMBER') {
+      const allowed = memberAllowed[srcCol] || []
+      if (!allowed.includes(dstCol)) {
+        alert(dstCol === 'DONE'
+          ? 'Members cannot mark tasks as completed. Submit for review instead.'
+          : `You cannot move tasks from ${srcCol} to ${dstCol}.`)
+        loadAll(); return
+      }
+    }
+
+    // If leader/manager is rejecting (IN_REVIEW → IN_PROGRESS), ask for comment
+    if (
+      srcCol === 'IN_REVIEW' && dstCol === 'IN_PROGRESS' &&
+      (user?.role === 'MANAGER' || user?.role === 'TEAM_LEADER')
+    ) {
+      // Optimistic update
+      const newBoard = { ...board }
+      const [moved] = newBoard[srcCol].splice(source.index, 1)
+      moved.status = dstCol
+      newBoard[dstCol].splice(destination.index, 0, moved)
+      setBoard({ ...newBoard })
+      setKanbanReject({ taskId })
+      setKanbanRejectComment('')
+      return
+    }
+
     // Optimistic update
     const newBoard = { ...board }
     const [moved] = newBoard[srcCol].splice(source.index, 1)
@@ -161,17 +246,24 @@ export default function KanbanBoard() {
     newBoard[dstCol].splice(destination.index, 0, moved)
     setBoard({ ...newBoard })
 
-    // Members can only move their own tasks
-    if (user?.role === 'MEMBER' && moved.assigned_to !== user.id) {
-      // revert
-      loadAll(); return
-    }
-
     try {
       await tasksApi.updateStatus(taskId, dstCol)
-    } catch {
+    } catch (e: any) {
+      alert(e.response?.data?.detail || 'Failed to update status')
       loadAll() // revert on failure
     }
+  }
+
+  const confirmKanbanReject = async () => {
+    if (!kanbanReject) return
+    try {
+      await tasksApi.updateStatus(kanbanReject.taskId, 'IN_PROGRESS', kanbanRejectComment)
+    } catch (e: any) {
+      alert(e.response?.data?.detail || 'Failed')
+      loadAll()
+    }
+    setKanbanReject(null)
+    setKanbanRejectComment('')
   }
 
   // ── Task edit / delete ───────────────────────────────────────────────────────
@@ -286,8 +378,8 @@ export default function KanbanBoard() {
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">Due Date</label>
-          <input type="date" value={taskForm.due_date ?? ''} onChange={e => setTaskForm({ ...taskForm, due_date: e.target.value || null })}
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Due Date & Time</label>
+          <input type="datetime-local" value={taskForm.due_date ?? ''} onChange={e => setTaskForm({ ...taskForm, due_date: e.target.value || null })}
             className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 outline-none" />
         </div>
       </div>
@@ -391,6 +483,16 @@ export default function KanbanBoard() {
                             key={task.id} task={task} index={index}
                             canEdit={isManagerOrLeader}
                             onEdit={openEdit} onDelete={setDeleteTask}
+                            onOpenComments={(t) => setActiveDrawerTask(t)}
+                            onRequestChanges={(t) => { setKanbanReject({ taskId: t.id }); setKanbanRejectComment('') }}
+                            onApprove={async (t) => {
+                              try {
+                                await tasksApi.updateStatus(t.id, 'DONE')
+                                loadAll()
+                              } catch (e: any) {
+                                alert(e.response?.data?.detail || 'Failed to approve task')
+                              }
+                            }}
                           />
                         ))}
                         {provided.placeholder}
@@ -435,6 +537,47 @@ export default function KanbanBoard() {
           </div>
         </Modal>
       )}
+
+      {/* Request Changes (Reject) Comment Modal */}
+      {kanbanReject && (
+        <Modal title="Request Changes" onClose={() => { setKanbanReject(null); loadAll() }} size="sm">
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">
+              You are requesting changes on this task. The member will be notified and the task will be moved back to{' '}
+              <span className="font-semibold text-blue-600">In Progress</span>.
+            </p>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                Feedback / Comment <span className="text-slate-400 font-normal">(optional)</span>
+              </label>
+              <textarea
+                value={kanbanRejectComment}
+                onChange={(e) => setKanbanRejectComment(e.target.value)}
+                rows={3}
+                placeholder="Describe what changes are needed..."
+                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-sm resize-none"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => { setKanbanReject(null); loadAll() }}
+                className="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50">
+                Cancel
+              </button>
+              <button onClick={confirmKanbanReject}
+                className="flex-1 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-semibold transition-colors">
+                Request Changes
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Task Discussion Side Panel Drawer */}
+      <TaskDiscussionDrawer
+        task={activeDrawerTask}
+        onClose={() => setActiveDrawerTask(null)}
+        isManagerOrLeader={isManagerOrLeader}
+      />
     </Layout>
   )
 }

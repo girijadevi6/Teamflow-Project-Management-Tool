@@ -1,3 +1,4 @@
+from datetime import datetime, date
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
@@ -13,10 +14,40 @@ from ..services.notification_service import (
     notify_task_assigned,
     notify_task_unassigned,
     notify_task_status_changed,
+    notify_task_submitted_for_review,
+    notify_task_changes_requested,
+    notify_task_approved,
+    notify_urgent_task_assigned,
 )
 from ..services.activity_service import log_activity
 
 router = APIRouter(tags=["Tasks"])
+
+# Allowed status transitions for members (cannot mark as DONE)
+MEMBER_ALLOWED_TRANSITIONS: dict[str, list[str]] = {
+    "TODO": ["IN_PROGRESS"],
+    "IN_PROGRESS": ["TODO", "IN_REVIEW"],
+    "IN_REVIEW": ["IN_PROGRESS"],  # self-correction only
+    "DONE": [],  # members can never move out of DONE
+}
+
+
+def _parse_due_date(val) -> Optional[date]:
+    if not val:
+        return None
+    if isinstance(val, date) and not isinstance(val, datetime):
+        return val
+    if isinstance(val, datetime):
+        return val.date()
+    if isinstance(val, str):
+        try:
+            return datetime.fromisoformat(val.replace("Z", "+00:00")).date()
+        except ValueError:
+            try:
+                return date.fromisoformat(val[:10])
+            except ValueError:
+                return None
+    return None
 
 
 def _build_task_response(task: Task) -> TaskResponse:
@@ -73,6 +104,9 @@ def create_task(
         if not is_member:
             raise HTTPException(status_code=400, detail="Assignee is not a project member")
 
+    due_date_obj = _parse_due_date(payload.due_date)
+    raw_due_str = str(payload.due_date) if payload.due_date else None
+
     task = Task(
         story_id=story_id,
         title=payload.title,
@@ -80,8 +114,9 @@ def create_task(
         priority=payload.priority,
         status=payload.status,
         assigned_to=payload.assigned_to,
-        due_date=payload.due_date,
+        due_date=due_date_obj,
         story_points=payload.story_points,
+        estimated_hours=payload.estimated_hours,
         created_by=current_user.id,
     )
     db.add(task)
@@ -103,6 +138,7 @@ def create_task(
     # Fire async notification for assignment
     if payload.assigned_to:
         background_tasks.add_task(notify_task_assigned, db, task, current_user)
+        background_tasks.add_task(notify_urgent_task_assigned, db, task, current_user, raw_due_str)
 
     background_tasks.add_task(
         log_activity, db, current_user.id, "created_task", "task",
@@ -188,9 +224,11 @@ def update_task(
     if payload.priority is not None:
         task.priority = payload.priority
     if payload.due_date is not None:
-        task.due_date = payload.due_date
+        task.due_date = _parse_due_date(payload.due_date)
     if payload.story_points is not None:
         task.story_points = payload.story_points
+    if payload.estimated_hours is not None:
+        task.estimated_hours = payload.estimated_hours
 
     if payload.assigned_to is not None:
         is_member = any(m.user_id == payload.assigned_to for m in task.story.project.members)
@@ -222,6 +260,10 @@ def update_task(
             background_tasks.add_task(notify_task_unassigned, db, task, old_assignee, current_user)
         if task.assigned_to:
             background_tasks.add_task(notify_task_assigned, db, task, current_user)
+
+    if task.assigned_to:
+        raw_due_str = str(payload.due_date) if payload.due_date else (str(task.due_date) if task.due_date else None)
+        background_tasks.add_task(notify_urgent_task_assigned, db, task, current_user, raw_due_str)
 
     if old_status != task.status:
         background_tasks.add_task(notify_task_status_changed, db, task, str(old_status), current_user)
@@ -286,7 +328,23 @@ def update_task_status(
         )
 
     old_status = task.status
-    task.status = payload.status
+    new_status = payload.status
+
+    # Enforce status transition rules for members
+    if current_user.role == UserRole.MEMBER:
+        allowed = MEMBER_ALLOWED_TRANSITIONS.get(old_status.value, [])
+        if new_status.value not in allowed:
+            if new_status.value == "DONE":
+                raise HTTPException(
+                    status_code=403,
+                    detail="Members cannot mark tasks as completed. Submit for review instead (move to IN_REVIEW).",
+                )
+            raise HTTPException(
+                status_code=403,
+                detail=f"Members cannot move tasks from {old_status.value} to {new_status.value}.",
+            )
+
+    task.status = new_status
     db.commit()
     db.refresh(task)
 
@@ -295,12 +353,36 @@ def update_task_status(
         .options(
             joinedload(Task.assignee),
             joinedload(Task.creator),
-            joinedload(Task.story).joinedload(UserStory.project),
+            joinedload(Task.story).joinedload(UserStory.project).joinedload(Project.members),
         )
         .filter(Task.id == task.id)
         .first()
     )
 
+    # ── Review workflow notifications ──────────────────────────────────────
+    # Member submits for review → notify leaders
+    if new_status == TaskStatus.IN_REVIEW and old_status != TaskStatus.IN_REVIEW:
+        background_tasks.add_task(notify_task_submitted_for_review, db, task, current_user)
+
+    # Leader/manager moves task from IN_REVIEW back to IN_PROGRESS → changes requested
+    if (
+        old_status == TaskStatus.IN_REVIEW
+        and new_status == TaskStatus.IN_PROGRESS
+        and current_user.role in (UserRole.MANAGER, UserRole.TEAM_LEADER)
+    ):
+        background_tasks.add_task(
+            notify_task_changes_requested, db, task, current_user, payload.comment or ""
+        )
+
+    # Leader/manager marks task as DONE from IN_REVIEW → approved
+    if (
+        old_status == TaskStatus.IN_REVIEW
+        and new_status == TaskStatus.DONE
+        and current_user.role in (UserRole.MANAGER, UserRole.TEAM_LEADER)
+    ):
+        background_tasks.add_task(notify_task_approved, db, task, current_user)
+
+    # General status change notification (for creator)
     background_tasks.add_task(notify_task_status_changed, db, task, str(old_status), current_user)
     background_tasks.add_task(
         log_activity, db, current_user.id, "moved_task", "task",

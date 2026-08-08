@@ -16,7 +16,7 @@ export interface AuthState {
 
 // ── Project ──────────────────────────────────────────────────────────────────
 
-export type ProjectStatus = 'PLANNING' | 'ACTIVE' | 'PENDING' | 'ON_HOLD' | 'COMPLETED' | 'ARCHIVED'
+export type ProjectStatus = 'PLANNING' | 'ACTIVE' | 'PENDING' | 'PENDING_REVIEW' | 'ON_HOLD' | 'COMPLETED' | 'ARCHIVED'
 
 export interface ProjectMember {
   id: number
@@ -144,6 +144,16 @@ export type NotificationType =
   | 'COMMENT_ADDED'
   | 'TASK_COMMENTED'
   | 'TASK_UNASSIGNED'
+  | 'TASK_SUBMITTED_FOR_REVIEW'
+  | 'TASK_CHANGES_REQUESTED'
+  | 'TASK_APPROVED'
+  | 'PROJECT_SUBMITTED_FOR_REVIEW'
+  | 'PROJECT_CHANGES_REQUESTED'
+  | 'PROJECT_COMPLETED'
+  | 'DAILY_DIGEST'
+  | 'URGENT_TASK_ASSIGNED'
+  | 'TASK_URGENT_DUE'
+  | 'URGENT_TASK_DUE_SOON'
 
 export interface Notification {
   id: number

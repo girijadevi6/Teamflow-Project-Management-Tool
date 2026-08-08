@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Plus, FolderKanban, CheckCircle2, Clock, AlertTriangle, Zap,
+  Plus, FolderKanban, CheckCircle2, Clock, Hourglass, Timer, AlertTriangle, Zap,
   Users, TrendingUp, Activity, ChevronRight, Pencil, Trash2, X,
 } from 'lucide-react'
 import { projectsApi, dashboardApi, authApi } from '../api'
@@ -215,9 +215,9 @@ export default function Dashboard() {
     ? [
         { icon: FolderKanban, label: 'Total Projects', value: stats.total_projects, color: 'text-brand-500', bg: 'bg-brand-50' },
         { icon: TrendingUp, label: 'Active Projects', value: stats.active_projects, color: 'text-green-600', bg: 'bg-green-50' },
-        { icon: Clock, label: 'Pending Projects', value: stats.pending_projects, color: 'text-purple-600', bg: 'bg-purple-50' },
+        { icon: Hourglass, label: 'Pending Projects', value: stats.pending_projects, color: 'text-purple-600', bg: 'bg-purple-50' },
         { icon: CheckCircle2, label: 'Tasks Done', value: stats.completed_tasks, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-        { icon: Clock, label: 'In Progress', value: stats.in_progress_tasks, color: 'text-blue-600', bg: 'bg-blue-50' },
+        { icon: Timer, label: 'In Progress', value: stats.in_progress_tasks, color: 'text-blue-600', bg: 'bg-blue-50' },
         { icon: Zap, label: 'Urgent Tasks', value: stats.urgent_tasks, color: 'text-red-600', bg: 'bg-red-50' },
         { icon: AlertTriangle, label: 'Overdue', value: stats.overdue_tasks, color: 'text-red-500', bg: 'bg-red-50' },
         { icon: Users, label: 'Assigned to Me', value: stats.my_assigned_tasks, color: 'text-purple-600', bg: 'bg-purple-50' },
@@ -249,7 +249,7 @@ export default function Dashboard() {
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
           {statCards.map(({ icon: Icon, label, value, color, bg }) => (
-            <div key={label} className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+            <div key={label} className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm card-hover-lift">
               <div className={`w-9 h-9 ${bg} rounded-xl flex items-center justify-center mb-3`}>
                 <Icon size={18} className={color} />
               </div>
@@ -290,7 +290,49 @@ export default function Dashboard() {
                           <h3 className="font-semibold text-slate-800 group-hover:text-brand-600 transition-colors truncate">
                             {p.name}
                           </h3>
-                          <Badge className={projectStatusColors[p.status]}>{p.status}</Badge>
+                          {(isManager || user?.role === 'TEAM_LEADER') ? (
+                            <select
+                              value={p.status}
+                              onChange={(e) => {
+                                e.stopPropagation()
+                                const newStatus = e.target.value
+                                if (newStatus === p.status) return
+                                projectsApi.updateStatus(p.id, newStatus).then(() => loadAll()).catch((err) => {
+                                  alert(err.response?.data?.detail || 'Failed to update status')
+                                })
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              className={`text-xs font-bold rounded-lg px-2.5 py-1 border outline-none cursor-pointer transition-colors ${
+                                p.status === 'COMPLETED' ? 'bg-green-100 text-green-700 border-green-200' :
+                                p.status === 'PENDING_REVIEW' ? 'bg-purple-100 text-purple-700 border-purple-200' :
+                                p.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                                'bg-slate-100 text-slate-700 border-slate-200'
+                              }`}
+                            >
+                              {isManager ? (
+                                <>
+                                  <option value="PLANNING">Planning</option>
+                                  <option value="ACTIVE">Active</option>
+                                  <option value="PENDING_REVIEW">Pending Review</option>
+                                  <option value="COMPLETED">Completed</option>
+                                  <option value="ON_HOLD">On Hold</option>
+                                  <option value="ARCHIVED">Archived</option>
+                                </>
+                              ) : (
+                                <>
+                                  {p.status === 'PLANNING' && <option value="PLANNING">Planning</option>}
+                                  {p.status === 'PLANNING' && <option value="ACTIVE">Active</option>}
+                                  {p.status === 'ACTIVE' && <option value="ACTIVE">Active</option>}
+                                  {p.status === 'ACTIVE' && <option value="PENDING_REVIEW">Submit for Review</option>}
+                                  {p.status === 'PENDING_REVIEW' && <option value="PENDING_REVIEW">Pending Review</option>}
+                                  {p.status === 'PENDING_REVIEW' && <option value="ACTIVE">Withdraw Review</option>}
+                                  {p.status === 'COMPLETED' && <option value="COMPLETED">Completed</option>}
+                                </>
+                              )}
+                            </select>
+                          ) : (
+                            <Badge className={projectStatusColors[p.status]}>{p.status === 'PENDING_REVIEW' ? 'PENDING REVIEW' : p.status}</Badge>
+                          )}
                           {p.priority && (
                             <Badge className={p.priority === 'URGENT' ? 'bg-red-100 text-red-700' : p.priority === 'HIGH' ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-600'}>
                               {p.priority}

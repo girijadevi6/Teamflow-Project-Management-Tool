@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Union
 from datetime import datetime, date
 from ..models.task import TaskStatus, Priority
 from .user import UserPublic
@@ -11,7 +11,7 @@ class TaskCreate(BaseModel):
     priority: Priority = Priority.MEDIUM
     status: TaskStatus = TaskStatus.TODO
     assigned_to: Optional[int] = None
-    due_date: Optional[date] = None
+    due_date: Optional[Union[datetime, date, str]] = None
     story_points: int = 1
     estimated_hours: Optional[float] = None
 
@@ -22,13 +22,14 @@ class TaskUpdate(BaseModel):
     priority: Optional[Priority] = None
     status: Optional[TaskStatus] = None
     assigned_to: Optional[int] = None
-    due_date: Optional[date] = None
+    due_date: Optional[Union[datetime, date, str]] = None
     story_points: Optional[int] = None
     estimated_hours: Optional[float] = None
 
 
 class TaskStatusUpdate(BaseModel):
     status: TaskStatus
+    comment: Optional[str] = None  # For review feedback (e.g., changes requested)
 
 
 class TaskAssignUpdate(BaseModel):
@@ -44,7 +45,7 @@ class TaskResponse(BaseModel):
     priority: Priority
     assigned_to: Optional[int]
     assignee: Optional[UserPublic] = None
-    due_date: Optional[date]
+    due_date: Optional[Union[datetime, date, str]] = None
     story_points: int
     estimated_hours: Optional[float] = None
     logged_hours: float = 0.0

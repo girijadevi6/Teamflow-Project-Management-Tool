@@ -34,8 +34,8 @@ export const projectsApi = {
   update: (id: number, data: Partial<{ name: string; description: string; status: string; priority?: string; deadline?: string | null }>) =>
     api.put<Project>(`/projects/${id}`, data),
 
-  updateStatus: (id: number, status: string) =>
-    api.patch<Project>(`/projects/${id}/status`, { status }),
+  updateStatus: (id: number, status: string, comment?: string) =>
+    api.patch<Project>(`/projects/${id}/status`, { status, ...(comment ? { comment } : {}) }),
 
   delete: (id: number) => api.delete(`/projects/${id}`),
 
@@ -94,8 +94,8 @@ export const tasksApi = {
 
   delete: (taskId: number) => api.delete(`/tasks/${taskId}`),
 
-  updateStatus: (taskId: number, status: string) =>
-    api.patch<Task>(`/tasks/${taskId}/status`, { status }),
+  updateStatus: (taskId: number, status: string, comment?: string) =>
+    api.patch<Task>(`/tasks/${taskId}/status`, { status, ...(comment ? { comment } : {}) }),
 
   assign: (taskId: number, userId: number | null) =>
     api.patch<Task>(`/tasks/${taskId}/assign`, { assigned_to: userId }),
@@ -109,7 +109,10 @@ export const commentsApi = {
   list: (taskId: number) => api.get<Comment[]>(`/tasks/${taskId}/comments`),
   create: (taskId: number, data: { content: string }) =>
     api.post<Comment>(`/tasks/${taskId}/comments`, data),
-  delete: (taskId: number, commentId: number) => api.delete(`/tasks/${taskId}/comments/${commentId}`),
+  update: (commentId: number, data: { content: string }) =>
+    api.put<Comment>(`/comments/${commentId}`, data),
+  delete: (commentId: number, taskId?: number) =>
+    taskId ? api.delete(`/tasks/${taskId}/comments/${commentId}`) : api.delete(`/comments/${commentId}`),
 }
 
 // ── Time Logs ─────────────────────────────────────────────────────────────────
@@ -145,3 +148,21 @@ export const dashboardApi = {
       `/dashboard/activity${projectId ? `?project_id=${projectId}` : ''}`
     ),
 }
+
+// ── Reports ───────────────────────────────────────────────────────────────────
+
+export const reportsApi = {
+  getProjectReport: (projectId: number) =>
+    api.get(`/reports/project/${projectId}`),
+
+  downloadCSVUrl: (projectId: number): string =>
+    `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/reports/project/${projectId}/download`,
+}
+
+// ── AI Assistant ──────────────────────────────────────────────────────────────
+
+export const chatApi = {
+  sendMessage: (message: string, history: Array<{ role: string; content: string }> = []) =>
+    api.post<{ response: string }>('/chat', { message, history }),
+}
+

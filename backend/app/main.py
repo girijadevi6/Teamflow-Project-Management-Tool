@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .database import engine, Base
 from .core.config import settings
-from .routers import auth, projects, stories, tasks, notifications, dashboard, comments, time_logs
+from .routers import auth, projects, stories, tasks, notifications, dashboard, comments, time_logs, reports, chat
 from .workers.due_date_worker import run_due_date_worker
 
 # Import all models so SQLAlchemy registers them before create_all
@@ -65,6 +65,8 @@ app.include_router(comments.router)
 app.include_router(time_logs.router)
 app.include_router(notifications.router)
 app.include_router(dashboard.router)
+app.include_router(reports.router)
+app.include_router(chat.router)
 
 
 @app.get("/", tags=["Health"])

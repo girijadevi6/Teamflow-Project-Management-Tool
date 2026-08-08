@@ -8,9 +8,9 @@ import { tasksApi } from '../api'
 import { useAuth } from '../context/AuthContext'
 import Layout from '../components/Layout'
 import Spinner from '../components/Spinner'
+import Modal from '../components/Modal'
 import Badge from '../components/Badge'
-import Avatar from '../components/Avatar'
-import ProgressBar from '../components/ProgressBar'
+import TaskDiscussionDrawer from '../components/TaskDiscussionDrawer'
 import type { Task, TaskStatus } from '../types'
 import {
   priorityColors, priorityDot, taskStatusColors,
@@ -23,6 +23,7 @@ export default function MyTasks() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
+  const [selectedTaskForComments, setSelectedTaskForComments] = useState<Task | null>(null)
 
   useEffect(() => {
     loadTasks()
@@ -179,6 +180,13 @@ export default function MyTasks() {
                             <option value="IN_REVIEW">In Review</option>
                             <option value="DONE">Done</option>
                           </select>
+                          <button
+                            onClick={() => setSelectedTaskForComments(task)}
+                            className="px-2.5 py-1.5 border border-slate-200 rounded-xl hover:bg-brand-50 hover:border-brand-200 text-slate-600 hover:text-brand-600 transition-colors flex items-center gap-1.5 text-xs font-semibold"
+                            title="View task discussion & comments"
+                          >
+                            <MessageSquare size={13} /> Discussion
+                          </button>
                           {task.project_id && (
                             <Link
                               to={`/projects/${task.project_id}`}
@@ -198,6 +206,11 @@ export default function MyTasks() {
           </div>
         )}
       </div>
+
+      <TaskDiscussionDrawer
+        task={selectedTaskForComments}
+        onClose={() => setSelectedTaskForComments(null)}
+      />
     </Layout>
   )
 }
