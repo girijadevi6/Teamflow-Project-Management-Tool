@@ -21,16 +21,16 @@ http://127.0.0.1:8000
 Production:
 
 ```text
-https://teamflow-backend.onrender.com
+https://teamflow-backend-41oe.onrender.com
 ```
 
 > If the deployment URL changes, replace the production base URL above. Endpoint paths below are relative to the base URL.
 
 ### Interactive documentation
 
-- Swagger UI: `/docs`
-- ReDoc: `/redoc`
-- OpenAPI specification: `/openapi.json`
+- Swagger UI: `https://teamflow-backend-41oe.onrender.com/docs`
+- ReDoc: `https://teamflow-backend-41oe.onrender.com/redoc`
+- OpenAPI specification: `https://teamflow-backend-41oe.onrender.com/openapi.json`
 
 ## 2. Authentication
 
