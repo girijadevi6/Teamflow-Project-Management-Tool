@@ -352,7 +352,7 @@ FastAPI automatically generates interactive API documentation from the actual ro
 ### Swagger UI
 
 ```text
-{BACKEND_URL}/docs
+https://teamflow-backend-41oe.onrender.com/docs
 ```
 
 For local development:
@@ -364,13 +364,13 @@ http://localhost:8000/docs
 ### ReDoc
 
 ```text
-{BACKEND_URL}/redoc
+https://teamflow-backend-41oe.onrender.com/redoc
 ```
 
 ### OpenAPI specification
 
 ```text
-{BACKEND_URL}/openapi.json
+https://teamflow-backend-41oe.onrender.com/openapi.json
 ```
 
 ### Manual API documentation
@@ -782,7 +782,7 @@ These are intentionally documented rather than hidden because the project is des
 ### Clone the repository
 
 ```bash
-git clone <YOUR_GITHUB_REPOSITORY_URL>
+git clone https://github.com/girijadevi6/Teamflow-Project-Management-Tool.git
 cd teamflow
 ```
 
@@ -970,14 +970,14 @@ After deployment, make sure these environment variables contain the actual produ
 ### Backend
 
 ```env
-FRONTEND_URL=<FINAL_FRONTEND_URL>
-CORS_ORIGINS=<FINAL_FRONTEND_URL>
+FRONTEND_URL=https://teamflow-frontend-kjdl.onrender.com
+CORS_ORIGINS=https://teamflow-frontend-kjdl.onrender.com
 ```
 
 ### Frontend
 
 ```env
-VITE_API_URL=<FINAL_BACKEND_URL>
+VITE_API_URL=https://teamflow-backend-41oe.onrender.com
 ```
 
 Because Vite environment variables are included during the frontend build, the frontend must be rebuilt/redeployed after changing `VITE_API_URL`.
@@ -1012,19 +1012,19 @@ Update this section after the final deployment.
 
 ```text
 Frontend:
-<FINAL_FRONTEND_URL>
+https://teamflow-frontend-kjdl.onrender.com
 
 Backend:
-<FINAL_BACKEND_URL>
+https://teamflow-backend-41oe.onrender.com
 
 Swagger:
-<FINAL_BACKEND_URL>/docs
+https://teamflow-backend-41oe.onrender.com/docs
 
 ReDoc:
-<FINAL_BACKEND_URL>/redoc
+https://teamflow-backend-41oe.onrender.com/redoc
 
 OpenAPI:
-<FINAL_BACKEND_URL>/openapi.json
+https://teamflow-backend-41oe.onrender.com/openapi.json
 ```
 
 ---
