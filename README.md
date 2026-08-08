@@ -4,7 +4,6 @@
 
 📚 **API Documentation:** [Swagger UI](https://teamflow-backend-41oe.onrender.com/docs)
 
-Deployment Note:
 Note: The PostgreSQL database is currently hosted using Render's free/trial offering. The database may expire after the applicable trial period, so the live application may become unavailable after that period.
 
 TeamFlow is a full-stack agile project management application designed for small teams of around 3–10 people. It follows a simple hierarchy:
