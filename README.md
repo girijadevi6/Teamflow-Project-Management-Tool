@@ -1,4 +1,7 @@
 # TeamFlow – Agile Project Management Tool
+🚀 **Live Demo:** [TeamFlow Application](https://teamflow-frontend-kjdl.onrender.com)
+
+📚 **API Documentation:** [Swagger UI](https://teamflow-backend-41oe.onrender.com/docs)
 
 TeamFlow is a full-stack agile project management application designed for small teams of around 3–10 people. It follows a simple hierarchy:
 
