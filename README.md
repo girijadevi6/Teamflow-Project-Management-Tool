@@ -10,6 +10,14 @@ TeamFlow is a full-stack agile project management application designed for small
 
 **Project → User Story → Task**
 
+The application has three roles: Manager, Team Leader, and Member. The Manager creates and manages projects, assigns Team Leaders, and gives the final project approval. 
+
+The **Manager** is responsible for the overall project and team. The Manager creates and manages projects, assigns Team Leaders to the projects, and monitors the overall project progress. The Manager can track the work completed by the team and, once the Team Leader submits the completed project, reviews it and provides the **final project approval**.
+
+The **Team Leader** manages the development workflow within the project. The Team Leader creates **User Stories** based on the project requirements and divides them into smaller **Tasks**. These Tasks are assigned to Members based on their responsibilities. The Team Leader monitors task progress, reviews the work submitted by Members, and uses the **comment section** to provide feedback or request changes. After all required work is completed and reviewed, the Team Leader submits the project to the Manager for final approval.
+
+The **Members** are responsible for completing the Tasks assigned to them. They can view their assigned Tasks, update their progress and status, log the time spent on the work, and submit completed Tasks to the Team Leader for review. If changes are requested, Members can refer to the comments provided by the Team Leader, make the necessary updates, and resubmit the Task. This creates a complete workflow from **Project → User Story → Task → Assignment → Development → Review → Final Approval**.
+
 The application provides role-based access, project and team management, a Kanban board, task assignment, comments, notifications, activity tracking, time logging, and an AI project assistant.
 
 The project was built for the Full-Stack Intern Assignment and focuses not only on functionality, but also on API design, database structure, security, asynchronous processing, documentation, and deployment.
