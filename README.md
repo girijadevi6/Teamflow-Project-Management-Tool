@@ -1008,23 +1008,26 @@ The backend seed process runs during deployment so the demo accounts can be crea
 
 ## 18. Production URLs
 
-Update this section after the final deployment.
+
 
 ```text
-Frontend:
+## 18. Production URLs
+
+Frontend:  
 [TeamFlow Application](https://teamflow-frontend-kjdl.onrender.com)
 
-Backend:
+Backend:  
 [TeamFlow API](https://teamflow-backend-41oe.onrender.com)
 
-Swagger:
+Swagger:  
 [Swagger UI](https://teamflow-backend-41oe.onrender.com/docs)
 
-ReDoc:
+ReDoc:  
 [ReDoc](https://teamflow-backend-41oe.onrender.com/redoc)
 
-OpenAPI:
+OpenAPI:  
 [OpenAPI Specification](https://teamflow-backend-41oe.onrender.com/openapi.json)
+
 ```
 
 ---
