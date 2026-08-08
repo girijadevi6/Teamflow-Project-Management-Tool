@@ -1006,8 +1006,6 @@ The backend seed process runs during deployment so the demo accounts can be crea
 
 ---
 ## 18. Production URLs
-```markdown
-
 
 Frontend:  
 [TeamFlow Application](https://teamflow-frontend-kjdl.onrender.com)
@@ -1023,9 +1021,8 @@ ReDoc:
 
 OpenAPI:  
 [OpenAPI Specification](https://teamflow-backend-41oe.onrender.com/openapi.json)
-```
----
 
+---
 ## 19. Design Decisions and Trade-offs
 
 ### FastAPI
