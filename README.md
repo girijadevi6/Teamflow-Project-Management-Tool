@@ -1005,13 +1005,9 @@ The free Render PostgreSQL plan has a limited lifetime, so a longer-running depl
 The backend seed process runs during deployment so the demo accounts can be created automatically.
 
 ---
-
 ## 18. Production URLs
+```markdown
 
-
-
-```text
-## 18. Production URLs
 
 Frontend:  
 [TeamFlow Application](https://teamflow-frontend-kjdl.onrender.com)
@@ -1027,9 +1023,7 @@ ReDoc:
 
 OpenAPI:  
 [OpenAPI Specification](https://teamflow-backend-41oe.onrender.com/openapi.json)
-
 ```
-
 ---
 
 ## 19. Design Decisions and Trade-offs
