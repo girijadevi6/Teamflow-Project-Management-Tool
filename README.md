@@ -1,7 +1,7 @@
 # TeamFlow – Agile Project Management Tool
 
  **Demo Link:** [Video Demonstration](https://drive.google.com/file/d/1WB0n1SnU_NdYQRfs1mdYLC9eoapjG-fe/view?usp=sharing)
- **Note:** The demo video uploaded here is low quality due to GitHub size constraints. View the high-quality video on Google Drive using the above link
+  **Note:** The demo video uploaded here in the repository is low quality due to GitHub size constraints. View the high-quality video on Google Drive using the above link.
 
 
 🚀 **Live Demo:** [TeamFlow Application](https://teamflow-frontend-kjdl.onrender.com)
